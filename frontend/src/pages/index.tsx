@@ -33,7 +33,8 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const panelRes = await fetch('http://localhost:8000/api/solar/panels');
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const panelRes = await fetch(`${baseUrl}/api/solar/panels`);
       const panelData = await panelRes.json();
       
       if (Array.isArray(panelData)) {
@@ -49,7 +50,7 @@ export default function Dashboard() {
         setAlerts(newAlerts);
       }
       
-      const statsRes = await fetch('http://localhost:8000/api/dashboard/stats');
+      const statsRes = await fetch(`${baseUrl}/api/dashboard/stats`);
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
