@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { motion } from 'framer-motion';
-import { SolarPanelCard, SolarPanel } from '@/components/SolarPanelCard';
-import { RealTimeChart } from '@/components/RealTimeChart';
-import { AlertPanel } from '@/components/AlertPanel';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SolarPanel } from '@/components/SolarPanelCard';
+import DashboardContent from '@/components/sections/DashboardContent';
+import Storage from '@/components/sections/Storage';
+import Analytics from '@/components/sections/Analytics';
+import MLModels from '@/components/sections/MLModels';
+import Incidents from '@/components/sections/Incidents';
 import { 
   LayoutDashboard, 
   Battery, 
@@ -12,11 +15,11 @@ import {
   Settings, 
   LogOut,
   Zap,
-  Activity,
   Cpu
 } from 'lucide-react';
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState('Dashboard');
   const [panels, setPanels] = useState<SolarPanel[]>([]);
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -30,15 +33,11 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      // Fetch panels
       const panelRes = await fetch('http://localhost:8000/api/solar/panels');
       const panelData = await panelRes.json();
       
-      // Defensive check: Ensure panelData is an array
       if (Array.isArray(panelData)) {
         setPanels(panelData);
-        
-        // Extract alerts
         const newAlerts = panelData
           .filter((panel: SolarPanel) => panel.status !== 'normal')
           .map((panel: SolarPanel) => ({
@@ -48,11 +47,8 @@ export default function Dashboard() {
             timestamp: panel.timestamp
           }));
         setAlerts(newAlerts);
-      } else {
-        console.warn('Received non-array data from /api/solar/panels:', panelData);
       }
       
-      // Fetch stats
       const statsRes = await fetch('http://localhost:8000/api/dashboard/stats');
       if (statsRes.ok) {
         const statsData = await statsRes.json();
@@ -62,6 +58,23 @@ export default function Dashboard() {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'Dashboard':
+        return <DashboardContent key="dashboard" panels={panels} stats={stats} alerts={alerts} />;
+      case 'Storage':
+        return <Storage key="storage" />;
+      case 'Analytics':
+        return <Analytics key="analytics" />;
+      case 'ML Models':
+        return <MLModels key="ml" />;
+      case 'Incidents':
+        return <Incidents key="incidents" />;
+      default:
+        return <DashboardContent key="default" panels={panels} stats={stats} alerts={alerts} />;
     }
   };
 
@@ -75,14 +88,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen text-slate-100 flex">
+    <div className="h-screen text-slate-100 flex overflow-hidden">
       <Head>
-        <title>Helios | Smart Solar Monitoring</title>
+        <title>Helios | {activeTab}</title>
       </Head>
 
       {/* Sidebar - Desktop */}
-      <aside className="w-20 lg:w-64 border-r border-white/5 bg-black/20 backdrop-blur-xl hidden md:flex flex-col p-6 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 mb-10 px-2">
+      <aside className="w-20 lg:w-64 border-r border-white/5 bg-black/20 backdrop-blur-xl hidden md:flex flex-col p-6 h-full shrink-0 z-50">
+        <div className="flex items-center gap-3 mb-10 px-2 cursor-pointer" onClick={() => setActiveTab('Dashboard')}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
             <Zap className="w-6 h-6 text-white" />
           </div>
@@ -90,177 +103,82 @@ export default function Dashboard() {
         </div>
 
         <nav className="space-y-2 flex-1">
-          <NavItem icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" active />
-          <NavItem icon={<Battery className="w-5 h-5" />} label="Storage" />
-          <NavItem icon={<TrendingUp className="w-5 h-5" />} label="Analytics" />
-          <NavItem icon={<Cpu className="w-5 h-5" />} label="ML Models" />
-          <NavItem icon={<AlertCircle className="w-5 h-5" />} label="Incidents" />
+          <NavItem 
+            icon={<LayoutDashboard className="w-5 h-5" />} 
+            label="Dashboard" 
+            active={activeTab === 'Dashboard'} 
+            onClick={() => setActiveTab('Dashboard')}
+          />
+          <NavItem 
+            icon={<Battery className="w-5 h-5" />} 
+            label="Storage" 
+            active={activeTab === 'Storage'} 
+            onClick={() => setActiveTab('Storage')}
+          />
+          <NavItem 
+            icon={<TrendingUp className="w-5 h-5" />} 
+            label="Analytics" 
+            active={activeTab === 'Analytics'} 
+            onClick={() => setActiveTab('Analytics')}
+          />
+          <NavItem 
+            icon={<Cpu className="w-5 h-5" />} 
+            label="ML Models" 
+            active={activeTab === 'ML Models'} 
+            onClick={() => setActiveTab('ML Models')}
+          />
+          <NavItem 
+            icon={<AlertCircle className="w-5 h-5" />} 
+            label="Incidents" 
+            active={activeTab === 'Incidents'} 
+            onClick={() => setActiveTab('Incidents')}
+          />
         </nav>
 
         <div className="pt-6 border-t border-white/5 space-y-2">
-          <NavItem icon={<Settings className="w-5 h-5" />} label="Settings" />
-          <NavItem icon={<LogOut className="w-5 h-5" />} label="Sign Out" />
+          <NavItem icon={<Settings className="w-5 h-5" />} label="Settings" onClick={() => {}} />
+          <NavItem icon={<LogOut className="w-5 h-5" />} label="Sign Out" onClick={() => {}} />
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 lg:p-12 max-w-[1600px] mx-auto w-full">
-        <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-white mb-2">Solar Network Overview</h1>
-            <p className="text-slate-400 font-medium flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Operational Efficiency: <span className="text-emerald-400">{stats ? (stats.system_efficiency * 100).toFixed(1) : '94.2'}%</span>
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="glass px-4 py-2 rounded-xl flex items-center gap-3 border-white/10">
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">System Load</p>
-                <p className="text-sm font-bold">4.2 kW</p>
-              </div>
-              <div className="w-10 h-1 h-10 rounded-full bg-white/5 relative overflow-hidden hidden lg:block">
-                <div className="absolute bottom-0 left-0 right-0 bg-primary h-[60%]" />
-              </div>
-            </div>
-            <button className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-primary/20 active:scale-95">
-              Generate Report
-            </button>
-          </div>
-        </header>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <StatCard 
-            title="Energy Produced" 
-            value={stats ? `${stats.total_energy_today} kWh` : "84.2 kWh"} 
-            trend="+12.4%" 
-            icon={<TrendingUp className="w-5 h-5" />}
-            color="text-emerald-400"
-          />
-          <StatCard 
-            title="Active Panels" 
-            value={stats ? stats.active_panels : "10"} 
-            trend="100%" 
-            icon={<Activity className="w-5 h-5" />}
-            color="text-primary"
-          />
-          <StatCard 
-            title="Fault Alerts" 
-            value={alerts.length} 
-            trend={alerts.length > 0 ? "Action Required" : "No Issues"} 
-            icon={<AlertCircle className="w-5 h-5" />}
-            color={alerts.length > 0 ? "text-rose-500" : "text-slate-400"}
-          />
-          <StatCard 
-            title="Peak Power" 
-            value={stats ? `${stats.peak_power} W` : "2,840 W"} 
-            trend="Today" 
-            icon={<Zap className="w-5 h-5" />}
-            color="text-amber-400"
-          />
+      <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto w-full">
+          <AnimatePresence mode="wait">
+            {renderContent()}
+          </AnimatePresence>
         </div>
-
-        {/* Alerts Section */}
-        <section className="mb-10">
-          <AlertPanel alerts={alerts} />
-        </section>
-
-        {/* Charts & Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-          <div className="lg:col-span-2">
-            <RealTimeChart panels={panels} />
-          </div>
-          <div className="glass p-8 rounded-3xl flex flex-col justify-between">
-            <div>
-              <h3 className="text-xl font-bold mb-2">Network Health</h3>
-              <p className="text-slate-400 text-sm mb-6">Diagnostic summary across active nodes</p>
-              
-              <div className="space-y-6">
-                <HealthMetric label="Inverter Integrity" value={98} color="bg-emerald-500" />
-                <HealthMetric label="Grid Connection" value={100} color="bg-emerald-500" />
-                <HealthMetric label="Storage Capacity" value={64} color="bg-primary" />
-                <HealthMetric label="ML Confidence" value={89} color="bg-secondary" />
-              </div>
-            </div>
-            
-            <div className="mt-8 p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-xs font-bold">Predictive AI Active</span>
-              </div>
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-          </div>
-        </div>
-
-        {/* Panels Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black tracking-tight">Active Solar Units</h2>
-            <div className="flex gap-2">
-              <button className="px-4 py-1.5 rounded-lg bg-white/5 text-xs font-bold hover:bg-white/10 transition-colors">All</button>
-              <button className="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-500">Faulty</button>
-              <button className="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-500">Offline</button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {panels.map((panel) => (
-              <SolarPanelCard key={panel.id} panel={panel} />
-            ))}
-          </div>
-        </section>
       </main>
     </div>
   );
 }
 
-function NavItem({ icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
+interface NavItemProps {
+  icon: any;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}
+
+function NavItem({ icon, label, active = false, onClick }: NavItemProps) {
   return (
-    <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-      active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-    }`}>
+    <button 
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group ${
+        active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+      }`}
+    >
+      {active && (
+        <motion.div 
+          layoutId="nav-glow"
+          className="absolute inset-0 bg-primary/20 blur-xl -z-10"
+        />
+      )}
       {icon}
       <span className="font-bold text-sm lg:block hidden">{label}</span>
+      {!active && (
+        <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary scale-0 group-hover:scale-100 transition-transform hidden lg:block" />
+      )}
     </button>
-  );
-}
-
-function StatCard({ title, value, trend, icon, color }: any) {
-  return (
-    <div className="glass p-6 rounded-3xl flex flex-col gap-4 border-white/5 hover:border-white/10 transition-colors">
-      <div className="flex items-center justify-between">
-        <div className={`p-2 rounded-xl bg-white/5 ${color}`}>
-          {icon}
-        </div>
-        <span className={`text-[10px] font-black tracking-widest uppercase ${color}`}>{trend}</span>
-      </div>
-      <div>
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{title}</p>
-        <p className="text-2xl font-black text-white">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function HealthMetric({ label, value, color }: any) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs font-bold">
-        <span className="text-slate-400">{label}</span>
-        <span>{value}%</span>
-      </div>
-      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          className={`h-full ${color}`} 
-        />
-      </div>
-    </div>
   );
 }
