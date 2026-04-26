@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SolarPanel } from '@/components/SolarPanelCard';
-import DashboardContent from '@/components/sections/DashboardContent';
-import Storage from '@/components/sections/Storage';
-import Analytics from '@/components/sections/Analytics';
-import MLModels from '@/components/sections/MLModels';
-import Incidents from '@/components/sections/Incidents';
+import { SolarPanel } from '../components/SolarPanelCard';
+import DashboardContent from '../components/sections/DashboardContent';
+import Storage from '../components/sections/Storage';
+import Analytics from '../components/sections/Analytics';
+import MLModels from '../components/sections/MLModels';
+import Incidents from '../components/sections/Incidents';
 import { 
   LayoutDashboard, 
   Battery, 
