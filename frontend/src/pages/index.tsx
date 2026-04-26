@@ -33,7 +33,8 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const isProd = process.env.NODE_ENV === 'production';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (isProd ? '/_/backend' : 'http://localhost:8000');
       const panelRes = await fetch(`${baseUrl}/api/solar/panels`);
       const panelData = await panelRes.json();
       
