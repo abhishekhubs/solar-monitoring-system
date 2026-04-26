@@ -50,9 +50,51 @@ async def get_panel_data(panel_id: str):
         raise HTTPException(status_code=404, detail="Panel not found")
     return panels_data[panel_id]
 
+def initialize_panels_if_empty():
+    """Initializes dummy panel data if the in-memory storage is empty."""
+    if not panels_data:
+        # Initialize 10 panels with realistic data for the current time
+        hour = datetime.now().hour
+        is_day = 6 <= hour <= 18
+        
+        for i in range(1, 11):
+            panel_id = f"SP-{i:03d}"
+            voltage = random.uniform(20, 28) if is_day else random.uniform(0, 2)
+            current = random.uniform(6, 10) if is_day else random.uniform(0, 0.5)
+            irradiance = random.uniform(400, 1000) if is_day else 0
+            temperature = random.uniform(25, 45) if is_day else random.uniform(15, 25)
+            
+            data = SolarPanelCreate(
+                voltage=voltage,
+                current=current,
+                temperature=temperature,
+                irradiance=irradiance
+            )
+            
+            # Use the existing logic to calculate power, status, and faults
+            faults = detect_faults(data)
+            status = determine_status(faults)
+            
+            panel_data = SolarPanelData(
+                id=panel_id,
+                timestamp=datetime.utcnow(),
+                voltage=data.voltage,
+                current=data.current,
+                power=data.voltage * data.current,
+                temperature=data.temperature,
+                irradiance=data.irradiance,
+                status=status,
+                faults=faults
+            )
+            panels_data[panel_id] = panel_data
+            
+            if panel_id not in panels_history:
+                panels_history[panel_id] = [panel_data]
+
 @router.get("/panels", response_model=List[SolarPanelData])
 async def get_all_panels():
-    """Get all panels data"""
+    """Get all panels data. Initializes dummy data if store is empty."""
+    initialize_panels_if_empty()
     return list(panels_data.values())
 
 @router.get("/panels/{panel_id}/history", response_model=List[SolarPanelData])

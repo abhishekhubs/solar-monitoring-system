@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from api.solar_routes import panels_data
+from api.solar_routes import panels_data, initialize_panels_if_empty
 import random
 
 router = APIRouter()
@@ -7,6 +7,7 @@ router = APIRouter()
 @router.get("/stats")
 async def get_dashboard_stats():
     """Get high-level dashboard statistics"""
+    initialize_panels_if_empty()
     panels = list(panels_data.values())
     
     if not panels:
