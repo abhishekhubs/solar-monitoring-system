@@ -1,110 +1,94 @@
 import { Line } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
+  LineElement, Title, Tooltip, Legend, Filler
 } from 'chart.js';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-interface SolarPanel {
-  id: string;
-  power: number;
-}
+interface SolarPanel { id: string; power: number; }
 
 export function RealTimeChart({ panels }: { panels: SolarPanel[] }) {
   const data = {
-    labels: panels.map(panel => panel.id),
-    datasets: [
-      {
-        label: 'Power Output (W)',
-        data: panels.map(panel => panel.power),
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3,
-        pointBackgroundColor: '#3b82f6',
-        pointBorderColor: '#fff',
-        pointHoverRadius: 6,
-        tension: 0.4,
-        fill: true,
-      },
-    ],
+    labels: panels.map(p => p.id),
+    datasets: [{
+      label: 'Power Output (W)',
+      data: panels.map(p => p.power),
+      borderColor: '#1d4ed8',
+      backgroundColor: 'rgba(29, 78, 216, 0.06)',
+      borderWidth: 2,
+      pointBackgroundColor: '#1d4ed8',
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+      fill: true,
+    }],
   };
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#fff',
-        bodyColor: '#cbd5e1',
-        padding: 12,
-        cornerRadius: 12,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: '#ffffff',
+        titleColor: '#0f172a',
+        bodyColor: '#475569',
+        borderColor: '#e2e8f0',
         borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: { family: 'Inter', size: 12, weight: '600' },
+        bodyFont: { family: 'Inter', size: 12 },
+        callbacks: {
+          label: (ctx: any) => `${ctx.raw.toFixed(1)} W`,
+        },
       },
     },
     scales: {
       y: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.05)',
-        },
-        ticks: {
-          color: '#94a3b8',
-          font: {
-            family: 'Inter',
-            size: 10,
-          },
-        },
+        grid: { color: '#f1f5f9', drawBorder: false },
+        border: { display: false },
+        ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 8 },
       },
       x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: '#94a3b8',
-          font: {
-            family: 'Inter',
-            size: 10,
-          },
-        },
+        grid: { display: false },
+        border: { display: false },
+        ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, maxRotation: 45, padding: 8 },
       },
     },
   };
 
   return (
-    <div className="glass p-8 rounded-3xl h-[400px]">
-      <div className="flex items-center justify-between mb-8">
+    <div className="card h-[340px] flex flex-col">
+      <div
+        className="flex items-center justify-between px-5 py-3.5 shrink-0"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
         <div>
-          <h2 className="text-xl font-bold text-slate-100">Live Power Analytics</h2>
-          <p className="text-sm text-slate-400">Aggregated real-time metrics across all panels</p>
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Live Power Output
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Aggregated across all panels
+          </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Live Stream</span>
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold"
+          style={{
+            background: 'var(--success-subtle)',
+            color: 'var(--success)',
+            border: '1px solid var(--success-border)',
+          }}
+        >
+          <span className="live-dot" style={{ width: '6px', height: '6px' }} />
+          Live
         </div>
       </div>
-      <div className="h-[280px]">
-        <Line data={data} options={options} />
+      <div className="flex-1 px-4 py-4">
+        <Line data={data} options={options as any} />
       </div>
     </div>
   );

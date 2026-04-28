@@ -7,6 +7,7 @@ class DummyDataGenerator:
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url
         self.panel_ids = [f"SP-{i:03d}" for i in range(1, 11)]  # SP-001 to SP-010
+        self.faulty_panels = ["SP-003", "SP-007"]  # Predesignated panels prone to issues
         
     async def generate_panel_data(self):
         """Generate realistic dummy data for all panels"""
@@ -26,7 +27,19 @@ class DummyDataGenerator:
                         current = random.uniform(0, 0.5)
                         irradiance = 0
                     
-                    temperature = random.uniform(20, 70)
+                    # Normal temperature range
+                    temperature = random.uniform(25, 45)
+                    
+                    # Occasionally inject faults for predesignated panels
+                    if panel_id in self.faulty_panels and random.random() < 0.2:
+                        fault_type = random.choice(["voltage", "temperature", "shading"])
+                        if fault_type == "voltage":
+                            voltage = random.uniform(10, 15)  # Triggers low_voltage
+                        elif fault_type == "temperature":
+                            temperature = random.uniform(90, 110)  # Triggers overheating
+                        elif fault_type == "shading":
+                            irradiance = random.uniform(50, 150)
+                            voltage = 22  # Triggers shading_detected
                     
                     data = {
                         "voltage": round(voltage, 2),

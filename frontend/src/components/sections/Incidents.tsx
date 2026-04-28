@@ -1,154 +1,225 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Search, Filter, CheckCircle2, AlertTriangle, XCircle, Clock, BarChart3, TrendingDown } from 'lucide-react';
+import {
+  AlertCircle, Filter, CheckCircle2, AlertTriangle, XCircle, Clock, BarChart3, TrendingDown
+} from 'lucide-react';
 import { Bar } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
 } from 'chart.js';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+const TIME_RANGES = ['1D', '1W', '1M', '1Y'] as const;
+type Range = typeof TIME_RANGES[number];
+
+type Incident = {
+  id: string; panel: string; type: string;
+  status: 'Active' | 'Resolved'; severity: string; time: string;
+};
+
+const BASE_INCIDENTS: Incident[] = [
+  { id: 'INC-2941', panel: 'Panel_01', type: 'Soiling',      status: 'Active',   severity: 'Low',      time: '10m ago'    },
+  { id: 'INC-2940', panel: 'Panel_04', type: 'Shadowing',    status: 'Resolved', severity: 'Medium',   time: '2h ago'     },
+  { id: 'INC-2938', panel: 'Panel_08', type: 'Hot Spot',     status: 'Active',   severity: 'High',     time: '5h ago'     },
+];
+
+const WEEK_EXTRA: Incident[] = [
+  { id: 'INC-2935', panel: 'Panel_02', type: 'Normal',       status: 'Resolved', severity: 'None',     time: 'Yesterday'  },
+  { id: 'INC-2931', panel: 'Panel_05', type: 'Short Circuit',status: 'Resolved', severity: 'Critical', time: '2 days ago' },
+];
+
+const MONTH_EXTRA: Incident[] = [
+  { id: 'INC-2812', panel: 'Panel_12', type: 'Dust',         status: 'Resolved', severity: 'Low',      time: '2 weeks ago'},
+  { id: 'INC-2705', panel: 'Panel_06', type: 'Inverter Fail',status: 'Resolved', severity: 'High',     time: '1 month ago'},
+];
+
+const INCIDENTS: Record<Range, Incident[]> = {
+  '1D': BASE_INCIDENTS,
+  '1W': [...BASE_INCIDENTS, ...WEEK_EXTRA],
+  '1M': [...BASE_INCIDENTS, ...WEEK_EXTRA, ...MONTH_EXTRA],
+  '1Y': [...BASE_INCIDENTS, ...WEEK_EXTRA, ...MONTH_EXTRA],
+};
+
+const MTTR_LABELS: Record<Range, string[]> = {
+  '1D': ['6AM','9AM','12PM','3PM','6PM','9PM','12AM'],
+  '1W': ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+  '1M': ['W1','W2','W3','W4'],
+  '1Y': ['J','F','M','A','M','J','J','A','S','O','N','D'],
+};
+
+const MTTR_DATA: Record<Range, number[]> = {
+  '1D': [2, 1.5, 3, 2.5, 4, 3, 2],
+  '1W': [4, 6, 3, 5, 8, 4, 5],
+  '1M': [12, 15, 10, 18],
+  '1Y': [45, 52, 40, 38, 42, 35, 30, 28, 25, 22, 20, 18],
+};
+
+function SeverityBadge({ s }: { s: string }) {
+  const map: Record<string, { cls: string; icon: any }> = {
+    Critical: { cls: 'badge-danger',   icon: <XCircle className="w-3 h-3" /> },
+    High:     { cls: 'badge-danger',   icon: <AlertTriangle className="w-3 h-3" /> },
+    Medium:   { cls: 'badge-warning',  icon: <AlertCircle className="w-3 h-3" /> },
+    Low:      { cls: 'badge-success',  icon: <AlertCircle className="w-3 h-3" /> },
+    None:     { cls: 'badge-neutral',  icon: <CheckCircle2 className="w-3 h-3" /> },
+  };
+  const cfg = map[s] || map.None;
+  return <span className={`badge ${cfg.cls}`}>{cfg.icon}{s}</span>;
+}
 
 export default function Incidents() {
-  const [timeRange, setTimeRange] = useState('1W');
-
-  const getIncidents = () => {
-    const base = [
-      { id: 'INC-2941', panel: 'Panel_01', type: 'Soiling', status: 'Active', severity: 'Low', time: '10m ago' },
-      { id: 'INC-2940', panel: 'Panel_04', type: 'Shadowing', status: 'Resolved', severity: 'Medium', time: '2h ago' },
-      { id: 'INC-2938', panel: 'Panel_08', type: 'Hot_Spot', status: 'Active', severity: 'High', time: '5h ago' },
-    ];
-
-    if (timeRange === '1D') return base;
-    if (timeRange === '1W') return [
-      ...base,
-      { id: 'INC-2935', panel: 'Panel_02', type: 'Normal', status: 'Resolved', severity: 'None', time: 'Yesterday' },
-      { id: 'INC-2931', panel: 'Panel_05', type: 'Short_Circuit', status: 'Resolved', severity: 'Critical', time: '2 days ago' },
-    ];
-    
-    return [
-      ...base,
-      { id: 'INC-2935', panel: 'Panel_02', type: 'Normal', status: 'Resolved', severity: 'None', time: 'Yesterday' },
-      { id: 'INC-2812', panel: 'Panel_12', type: 'Dust', status: 'Resolved', severity: 'Low', time: '2 weeks ago' },
-      { id: 'INC-2705', panel: 'Panel_06', type: 'Inverter_Fail', status: 'Resolved', severity: 'High', time: '1 month ago' },
-    ];
-  };
-
-  const getMTTRData = () => {
-    switch (timeRange) {
-      case '1D': return [2, 1.5, 3, 2.5, 4, 3, 2];
-      case '1W': return [4, 6, 3, 5, 8, 4, 5];
-      case '1M': return [12, 15, 10, 18];
-      case '1Y': return [45, 52, 40, 38, 42, 35, 30, 28, 25, 22, 20, 18];
-      default: return [4, 6, 3, 5, 8, 4, 5];
-    }
-  };
+  const [range, setRange] = useState<Range>('1W');
+  const incidents = INCIDENTS[range];
 
   const chartData = {
-    labels: timeRange === '1D' ? ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM', '12AM'] : 
-            timeRange === '1W' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] :
-            timeRange === '1M' ? ['W1', 'W2', 'W3', 'W4'] :
-            ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'],
+    labels: MTTR_LABELS[range],
     datasets: [{
-      label: 'MTTR (Hours)',
-      data: getMTTRData(),
-      backgroundColor: 'rgba(59, 130, 246, 0.4)',
-      borderColor: '#3b82f6',
+      label: 'MTTR (hrs)',
+      data: MTTR_DATA[range],
+      backgroundColor: 'rgba(29,78,216,0.12)',
+      borderColor: '#1d4ed8',
       borderWidth: 2,
-      borderRadius: 6,
-    }]
+      borderRadius: 5,
+    }],
   };
 
-  const chartOptions = {
+  const chartOpts = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#fff',
+        titleColor: '#0f172a',
+        bodyColor: '#475569',
+        borderColor: '#e2e8f0',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: { family: 'Inter', size: 12, weight: '600' },
+        bodyFont: { family: 'Inter', size: 12 },
+        callbacks: { label: (ctx: any) => `${ctx.raw} hours` },
+      },
+    },
     scales: {
-      y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b' } },
-      x: { grid: { display: false }, ticks: { color: '#64748b' } }
-    }
+      y: {
+        grid: { color: '#f1f5f9', drawBorder: false },
+        border: { display: false },
+        ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 8 },
+      },
+      x: {
+        grid: { display: false },
+        border: { display: false },
+        ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 8 },
+      },
+    },
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="space-y-8"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-white mb-2">Incidents & Logs</h1>
-          <p className="text-slate-400 font-medium">History of detected faults and resolution tracking</p>
+          <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+            Incidents & Logs
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Fault history and resolution tracking
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex bg-slate-900/50 backdrop-blur-md rounded-xl p-1 border border-white/5">
-            {['1D', '1W', '1M', '1Y'].map(t => (
-              <button 
-                key={t} 
-                onClick={() => setTimeRange(t)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${t === timeRange ? 'bg-primary text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+        <div className="flex items-center gap-2">
+          <div
+            className="flex p-0.5 rounded-md gap-0.5"
+            style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)' }}
+          >
+            {TIME_RANGES.map(t => (
+              <button
+                key={t}
+                onClick={() => setRange(t)}
+                className="px-3 py-1.5 rounded text-xs font-semibold transition-colors"
+                style={{
+                  background: t === range ? 'var(--bg-surface)' : 'transparent',
+                  color: t === range ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: t === range ? 'var(--shadow-xs)' : 'none',
+                }}
               >
                 {t}
               </button>
             ))}
           </div>
-          <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all">
-            <Filter size={20} />
+          <button className="btn-icon">
+            <Filter className="w-4 h-4" />
           </button>
         </div>
-      </header>
+      </div>
 
-      <div className="glass rounded-3xl overflow-hidden border-white/5">
+      {/* Incidents table */}
+      <div className="card overflow-hidden">
+        <div
+          className="flex items-center justify-between px-5 py-3"
+          style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}
+        >
+          <p className="section-title">Incident Log</p>
+          <span className="badge badge-neutral">{incidents.length} records</span>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Incident ID</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Node</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Type</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Severity</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Time</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right">Status</th>
+              <tr>
+                <th>Incident ID</th>
+                <th>Node</th>
+                <th>Type</th>
+                <th>Severity</th>
+                <th>Time</th>
+                <th style={{ textAlign: 'right' }}>Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
-              {getIncidents().map((inc) => (
-                <tr key={inc.id} className="hover:bg-white/[0.01] transition-colors group">
-                  <td className="px-8 py-5 font-mono text-sm text-primary font-bold">{inc.id}</td>
-                  <td className="px-8 py-5 text-sm font-bold text-white">{inc.panel}</td>
-                  <td className="px-8 py-5">
-                    <span className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-black text-slate-300 border border-white/5 uppercase tracking-tighter">
-                      {inc.type.replace('_', ' ')}
+            <tbody>
+              {incidents.map(inc => (
+                <tr key={inc.id}>
+                  <td>
+                    <span className="mono font-semibold" style={{ color: 'var(--accent)' }}>
+                      {inc.id}
                     </span>
                   </td>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-2">
-                      <SeverityIcon severity={inc.severity} />
-                      <span className="text-sm font-medium text-slate-200">{inc.severity}</span>
-                    </div>
+                  <td>
+                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {inc.panel}
+                    </span>
                   </td>
-                  <td className="px-8 py-5 text-sm text-slate-500 flex items-center gap-2 font-medium">
-                    <Clock size={14} className="text-slate-600" />
-                    {inc.time}
+                  <td>
+                    <span className="chip">{inc.type}</span>
                   </td>
-                  <td className="px-8 py-5 text-right">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${
-                      inc.status === 'Active' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${inc.status === 'Active' ? 'bg-rose-500' : 'bg-emerald-500'} ${inc.status === 'Active' ? 'animate-pulse' : ''}`} />
+                  <td><SeverityBadge s={inc.severity} /></td>
+                  <td>
+                    <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <Clock className="w-3.5 h-3.5" style={{ color: 'var(--text-disabled)' }} />
+                      {inc.time}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span
+                      className="badge"
+                      style={{
+                        background: inc.status === 'Active' ? 'var(--danger-subtle)' : 'var(--success-subtle)',
+                        color: inc.status === 'Active' ? 'var(--danger)' : 'var(--success)',
+                        borderColor: inc.status === 'Active' ? 'var(--danger-border)' : 'var(--success-border)',
+                      }}
+                    >
+                      <span
+                        className={`live-dot ${inc.status !== 'Active' ? '' : ''}`}
+                        style={{
+                          width: '5px', height: '5px',
+                          background: inc.status === 'Active' ? 'var(--danger)' : 'var(--success)',
+                          animation: inc.status === 'Active' ? undefined : 'none',
+                        }}
+                      />
                       {inc.status}
                     </span>
                   </td>
@@ -159,51 +230,68 @@ export default function Incidents() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 glass p-8 rounded-3xl flex flex-col h-[400px]">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-                <BarChart3 className="text-primary" />
+      {/* MTTR chart + Resolution rate */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        <div
+          className="lg:col-span-2 card overflow-hidden"
+          style={{ height: '320px', display: 'flex', flexDirection: 'column' }}
+        >
+          <div
+            className="flex items-center justify-between px-5 py-3.5 shrink-0"
+            style={{ borderBottom: '1px solid var(--border)' }}
+          >
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                 Mean Time To Resolution
-              </h3>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Response efficiency tracking</p>
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-emerald-400">
-              <TrendingDown size={16} />
-              <span className="text-xs font-black">-14% vs last period</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--success)' }}>
+              <TrendingDown className="w-3.5 h-3.5" />
+              −14% vs last period
             </div>
           </div>
-          <div className="flex-1">
-            <Bar data={chartData} options={chartOptions as any} />
+          <div className="flex-1 px-4 py-4">
+            <Bar data={chartData} options={chartOpts as any} />
           </div>
         </div>
 
-        <div className="glass p-8 rounded-3xl flex flex-col justify-center items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-primary/20 flex items-center justify-center mb-6 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin" />
-            <CheckCircle2 size={32} className="text-emerald-500" />
+        {/* Resolution rate */}
+        <div className="card flex flex-col items-center justify-center gap-5 py-8">
+          <div className="relative w-28 h-28">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="8" />
+              <motion.circle
+                cx="50" cy="50" r="42" fill="none"
+                stroke="#16a34a" strokeWidth="8"
+                strokeDasharray={String(2 * Math.PI * 42)}
+                initial={{ strokeDashoffset: 2 * Math.PI * 42 }}
+                animate={{ strokeDashoffset: 2 * Math.PI * 42 * 0.06 }}
+                transition={{ duration: 1.2, ease: 'easeOut' }}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 mb-1" style={{ color: 'var(--success)' }} />
+              <span className="text-2xl font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
+                94%
+              </span>
+            </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">94%</p>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Resolution Rate</p>
-          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-6">
-            <div className="h-full bg-emerald-500 w-[94%] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+          <div className="text-center px-4">
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Resolution Rate
+            </p>
+            <p
+              className="text-xs mt-1 leading-relaxed"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              System-automated resolutions stable. MTTR trending down across all nodes.
+            </p>
           </div>
-          <p className="text-slate-400 text-sm leading-relaxed font-medium">
-            System-automated resolutions have stabilized. MTTR is down across all nodes.
-          </p>
         </div>
       </div>
     </motion.div>
   );
-}
-
-function SeverityIcon({ severity }: { severity: string }) {
-  switch (severity) {
-    case 'Critical': return <XCircle className="text-rose-500 w-4 h-4" />;
-    case 'High': return <AlertTriangle className="text-rose-400 w-4 h-4" />;
-    case 'Medium': return <AlertCircle className="text-amber-400 w-4 h-4" />;
-    case 'Low': return <AlertCircle className="text-emerald-400 w-4 h-4" />;
-    default: return <CheckCircle2 className="text-slate-400 w-4 h-4" />;
-  }
 }

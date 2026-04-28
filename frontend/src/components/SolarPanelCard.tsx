@@ -13,98 +13,118 @@ export interface SolarPanel {
   faults: string[];
 }
 
+const statusConfig = {
+  normal:  { label: 'Normal',  icon: ShieldCheck, cls: 'status-normal'  },
+  warning: { label: 'Warning', icon: AlertTriangle, cls: 'status-warning' },
+  fault:   { label: 'Fault',   icon: XCircle,    cls: 'status-fault'   },
+};
+
 export function SolarPanelCard({ panel }: { panel: SolarPanel }) {
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'normal': return <ShieldCheck className="w-5 h-5 text-emerald-400" />;
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-400" />;
-      case 'fault': return <XCircle className="w-5 h-5 text-rose-400" />;
-      default: return <Activity className="w-5 h-5 text-slate-400" />;
-    }
-  };
+  const cfg = statusConfig[panel.status] || statusConfig.normal;
+  const StatusIcon = cfg.icon;
 
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'normal': return 'status-normal';
-      case 'warning': return 'status-warning';
-      case 'fault': return 'status-fault';
-      default: return '';
-    }
-  };
-
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  };
+  const formatTime = (ts: string) =>
+    new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      className="glass glass-hover p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden group"
+      transition={{ duration: 0.25 }}
+      className="card flex flex-col gap-0 overflow-hidden"
+      style={{ transition: 'box-shadow 0.15s' }}
+      onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-md)')}
+      onMouseLeave={e => (e.currentTarget.style.boxShadow = 'var(--shadow-sm)')}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-white/5 group-hover:bg-primary/20 transition-colors">
-            <Sun className="w-6 h-6 text-primary" />
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex items-center justify-center w-8 h-8 rounded-lg"
+            style={{ background: 'var(--accent-subtle)' }}
+          >
+            <Sun className="w-4 h-4" style={{ color: 'var(--accent)' }} />
           </div>
-          <h3 className="text-lg font-bold text-slate-100">{panel.id}</h3>
-        </div>
-        <div className={`status-badge ${getStatusClass(panel.status)} flex items-center gap-1.5`}>
-          {getStatusIcon(panel.status)}
-          <span>{panel.status}</span>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mt-2">
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-slate-400 text-xs">
-            <Zap className="w-3 h-3" />
-            <span>Power Output</span>
+          <div>
+            <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.2 }}>
+              {panel.id}
+            </p>
+            <p className="text-[11px] mono" style={{ color: 'var(--text-muted)' }}>
+              {formatTime(panel.timestamp)}
+            </p>
           </div>
-          <p className="text-xl font-bold text-slate-100">{panel.power.toFixed(1)} <span className="text-sm font-medium text-slate-400">W</span></p>
         </div>
-        
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-slate-400 text-xs">
-            <Thermometer className="w-3 h-3" />
-            <span>Temperature</span>
-          </div>
-          <p className="text-xl font-bold text-slate-100">{panel.temperature.toFixed(1)}<span className="text-sm font-medium text-slate-400">°C</span></p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Voltage</p>
-          <p className="text-md font-semibold text-slate-200">{panel.voltage.toFixed(2)} V</p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Current</p>
-          <p className="text-md font-semibold text-slate-200">{panel.current.toFixed(2)} A</p>
-        </div>
+        <span className={`status-badge ${cfg.cls}`}>
+          <StatusIcon className="w-3 h-3" />
+          {cfg.label}
+        </span>
       </div>
 
+      {/* Metrics grid */}
+      <div className="grid grid-cols-2 gap-px" style={{ background: 'var(--border)' }}>
+        {[
+          { label: 'Power',       value: `${panel.power.toFixed(1)} W`,  icon: Zap },
+          { label: 'Temperature', value: `${panel.temperature.toFixed(1)} °C`, icon: Thermometer },
+          { label: 'Voltage',     value: `${panel.voltage.toFixed(2)} V`, icon: null },
+          { label: 'Current',     value: `${panel.current.toFixed(2)} A`, icon: null },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="px-4 py-3" style={{ background: 'var(--bg-surface)' }}>
+            <p className="kpi-label">{label}</p>
+            <p className="font-semibold text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Faults */}
       {panel.faults.length > 0 && (
-        <div className="mt-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
-          <p className="text-[10px] uppercase tracking-wider text-rose-400 font-bold mb-2">Detected Faults</p>
-          <div className="flex flex-wrap gap-1.5">
-            {panel.faults.map((fault, index) => (
-              <span key={index} className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                {fault.replace('_', ' ')}
+        <div
+          className="px-4 py-3"
+          style={{
+            background: 'var(--danger-subtle)',
+            borderTop: '1px solid var(--danger-border)',
+          }}
+        >
+          <p
+            className="text-[11px] font-bold uppercase tracking-wider mb-2"
+            style={{ color: 'var(--danger)' }}
+          >
+            Detected Faults
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {panel.faults.map((fault, i) => (
+              <span
+                key={i}
+                className="chip"
+                style={{
+                  background: 'var(--danger-subtle)',
+                  color: 'var(--danger)',
+                  borderColor: 'var(--danger-border)',
+                }}
+              >
+                {fault.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
         </div>
       )}
 
-      <div className="mt-auto pt-4 flex items-center justify-between border-t border-white/5">
-        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
-          <Activity className="w-3 h-3 animate-pulse-soft" />
-          <span>Real-time tracking</span>
-        </div>
-        <p className="text-[10px] text-slate-500 font-mono">
-          {formatTime(panel.timestamp)}
-        </p>
+      {/* Footer */}
+      <div
+        className="flex items-center gap-1.5 px-4 py-2"
+        style={{
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-subtle)',
+        }}
+      >
+        <Activity className="w-3 h-3" style={{ color: 'var(--text-disabled)' }} />
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+          Live tracking
+        </span>
       </div>
     </motion.div>
   );

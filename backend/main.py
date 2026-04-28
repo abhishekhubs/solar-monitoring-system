@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
         await task
 
 app = FastAPI(
-    title="Smart Solar Monitoring API",
+    title="SolarGuard API",
     description="API for solar panel monitoring and fault detection",
     version="1.0.0",
     lifespan=lifespan
@@ -39,7 +39,7 @@ app.include_router(dashboard_routes.router, prefix="/api/dashboard", tags=["Dash
 
 @app.get("/")
 async def root():
-    return {"message": "Smart Solar Monitoring System API"}
+    return {"message": "SolarGuard API"}
 
 @app.get("/health")
 async def health_check():

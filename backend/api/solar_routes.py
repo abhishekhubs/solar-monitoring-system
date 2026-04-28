@@ -114,20 +114,24 @@ def detect_faults(data: SolarPanelCreate) -> List[str]:
     """Simple fault detection logic"""
     faults = []
     
-    if data.voltage < 18:  # Low voltage threshold
-        faults.append("low_voltage")
+    # Check for nighttime - low voltage and current are normal then
+    is_night = data.irradiance < 50
     
-    if data.voltage > 30:  # High voltage threshold
-        faults.append("high_voltage")
+    if not is_night:
+        if data.voltage < 18:  # Low voltage threshold
+            faults.append("low_voltage")
         
-    if data.current > 12:  # High current
-        faults.append("high_current")
-        
-    if data.temperature > 65:  # Overheating
+        if data.voltage > 30:  # High voltage threshold
+            faults.append("high_voltage")
+            
+        if data.current > 12:  # High current
+            faults.append("high_current")
+            
+        if data.irradiance < 200 and data.voltage > 20:  # Shading
+            faults.append("shading_detected")
+
+    if data.temperature > 85:  # Overheating threshold increased
         faults.append("overheating")
-        
-    if data.irradiance < 200 and data.voltage > 20:  # Shading
-        faults.append("shading_detected")
         
     return faults
 
